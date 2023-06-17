@@ -2,6 +2,8 @@ from pathlib import Path
 
 CATEGORICAL_COLUMNS = ["POLYMER CLASS"]
 
+SMILES_COLUMN = "SMILES"
+
 COUPLED_COLUMNS = [
     ('Molar Volume Vm.1', 'Unnamed: 42', 'MOLAR VOL'),
     ('Density ρ.1', 'Unnamed: 44', 'DENSITY'),
@@ -50,3 +52,22 @@ TRAIN_COLUMNS = [
 ]
 
 TARGET_COLUMNS = ["DENSITY"]
+
+POLYMER_CLASS = 'POLYMER CLASS'
+
+DEFAULT_INPUTS = list(el for el in TRAIN_COLUMNS if el not in TARGET_COLUMNS + [SMILES_COLUMN] + CATEGORICAL_COLUMNS)
+
+TRANSLATION = {
+    'POLYMER CLASS': "Polymer class",
+    'SMILES': 'SMILES',
+    'MOL W REP': "Molecular weight of repeat unit",
+    'VDW VOL': "Van-der-Waals Volume",
+    'MOLAR VOL': "Molar Volume",
+    'DENSITY': "Density",
+    'SOLUBILITY': "Solubility parameter",
+    'COH ENERGY': "Molar cohesive energy",
+    'GLASS TEMP': "Glass transition temperature",
+    'HEAT CAP': "Molar heat capacity",
+    'ENT MOL WEIGHT': "Entanglement molecular weight",
+    'IND REFRACTION': "Index of refraction",
+}

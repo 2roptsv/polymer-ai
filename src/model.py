@@ -25,7 +25,7 @@ class ModelWrapper:
     def save_model(
         checkpoint_path: Path,
         model: XGBRegressor,
-        categories_mapping: Dict
+        categories_mapping: Dict,
     ):
         checkpoint_path.mkdir(parents=True, exist_ok=True)
         model_checkpoint_path = ModelWrapper._model_path(checkpoint_path)
@@ -56,7 +56,7 @@ class ModelWrapper:
     def __call__(self, input_kwargs: Dict, smiles: str):
         model_names: Set[str] = set(self._feature_names)
         model_input = {}
-        for key, value in input_kwargs:
+        for key, value in input_kwargs.items():
             if key not in model_names:
                 print(f"Passed input kwarg {key} not found in model input names. Check name or fix model train inputs.")
                 continue
@@ -83,3 +83,6 @@ class ModelWrapper:
         model_input.update({str(k): v for k, v in enumerate(smiles)})
         assert set(model_input.keys()) == model_names
         return self._model.predict(pd.DataFrame.from_dict([model_input]))[0]
+
+    def get_possible_category_values(self, column):
+        return [item[0] for item in sorted(self._categories_mapping[column].items(), key=lambda x: x[1])]
