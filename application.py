@@ -24,7 +24,7 @@ class Window(QMainWindow):
             msg.setWindowTitle("Success!")
             lines = ["Predictions: {:.2f}, MAPE {:.2f}".format(predictions[target], metrics[target])
                      for target in predictions]
-            msg.setText('\n'.join("Predictions:", *lines))
+            msg.setText('\n'.join(["Predictions:"] + lines))
             x = msg.exec_()
 
             self.update()
