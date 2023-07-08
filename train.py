@@ -1,4 +1,5 @@
 import argparse
+from collections import OrderedDict
 import logging
 import numpy as np
 from pathlib import Path
@@ -9,7 +10,7 @@ from xgboost import XGBRegressor
 
 from src.defaults import TARGET_COLUMNS
 from src.process_data import process_data
-from src.model import ModelWrapper
+from src.model import ModelWrapper, METRICS_KEY, TARGETS_KEY
 
 logging.basicConfig()
 
@@ -34,16 +35,25 @@ def train(
     print("Train model:", xgbr)
     xgbr.fit(X_train, y_train)
 
-    y_pred = xgbr.predict(X_test)
+    y_pred = np.array(xgbr.predict(X_test))
+    y_test = np.array(y_test)
     print("Train finished:")
-    print('MAE', mean_absolute_error(y_test, y_pred))
-    print('MSE', mean_squared_error(y_test, y_pred))
-    print('RMSE', mean_squared_error(y_test, y_pred, squared=False))
-    print('MAPE', mean_absolute_percentage_error(y_test, y_pred))
+    targets_and_metrics = {TARGETS_KEY: [], METRICS_KEY: []}
+    for i, column in enumerate(target_columns):
+        y_t = y_test[:, i]
+        y_p = y_pred[:, i]
+        print(f"Metrics for target {column}:")
+        print('MAE', mean_absolute_error(y_t, y_p))
+        print('MSE', mean_squared_error(y_t, y_p))
+        print('RMSE', mean_squared_error(y_t, y_p, squared=False))
+        mape = mean_absolute_percentage_error(y_t, y_p)
+        print('MAPE', mape)
+        targets_and_metrics[TARGETS_KEY].append(column)
+        targets_and_metrics[METRICS_KEY].append(mape)
 
     print("Features importance order")
     print(list(np.array(xgbr.feature_names_in_)[np.argsort(-xgbr.feature_importances_)]))
-    ModelWrapper.save_model(model_save_path, xgbr, categories_mapping)
+    ModelWrapper.save_model(model_save_path, xgbr, categories_mapping, targets_and_metrics)
 
 
 def create_argument_parser():

@@ -10,8 +10,6 @@ import sys
 from src.model import ModelWrapper
 from src.defaults import DEFAULT_INPUTS, TRANSLATION, POLYMER_CLASS
 
-MAPE = 0.08
-
 
 class Window(QMainWindow):
     def _get_on_click_callback(self):
@@ -19,12 +17,14 @@ class Window(QMainWindow):
             keyword_inputs, smiles = self._collect_data()
             print(smiles)
             print(keyword_inputs)
-            prediction = self._callback(keyword_inputs, smiles)
-            print(prediction)
+            predictions, metrics = self._callback(keyword_inputs, smiles)
+            print(predictions, metrics)
 
             msg = QMessageBox()
             msg.setWindowTitle("Success!")
-            msg.setText("Predicted density: {:.2f}, MAPE {}".format(prediction, MAPE))
+            lines = ["Predictions: {:.2f}, MAPE {:.2f}".format(predictions[target], metrics[target])
+                     for target in predictions]
+            msg.setText('\n'.join("Predictions:", *lines))
             x = msg.exec_()
 
             self.update()

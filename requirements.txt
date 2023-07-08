@@ -2,7 +2,9 @@ numpy==1.24.3
 pandas==2.0.2
 scikit_learn==1.2.2
 xgboost==1.7.5
-deepchem==2.7.1
-PyQt5==5.15.9
+gensim==4.2
+tensorflow
+deepchem
 PyQt5_sip==12.12.1
+rdkit
 mol2vec @ git+https://github.com/samoturk/mol2vec
