@@ -1,31 +1,63 @@
 import os
 from typing import Any, Callable, Dict, List
 from pathlib import Path
+import sys
+import tempfile
 
 from PyQt5.QtCore import *
 from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
-import sys
+from PyQt5.QtSvg import *
 
 from src.model import ModelWrapper
 from src.defaults import DEFAULT_INPUTS, TRANSLATION, POLYMER_CLASS
+from src.draw import smiles_to_svg
+
+
+class ResultPopUp(QWidget):
+    def __init__(
+            self, 
+            predictions: Dict[str, float],
+            metrics: Dict[str, float],
+            smiles_svg: Path
+    ):
+        super().__init__()
+        self.predictions = predictions
+        self.metrics = metrics
+        self.smiles_svg = smiles_svg
+        self._build_ui()
+
+    def _build_ui(self):
+        lines = ["{}: {:.2f}, MAPE {:.2f}".format(TRANSLATION[target], 
+                                                  self.predictions[target], 
+                                                  self.metrics[target])
+                 for target in self.predictions]
+        text = '\n'.join(["Predictions:"] + lines)
+
+        layout = QVBoxLayout()
+
+        self.svg = QSvgWidget(self.smiles_svg)
+        self.svg.setGeometry(0,0,400,400)
+        layout.addWidget(self.svg)
+
+        self.label = QLabel(text)
+        layout.addWidget(self.label)
+
+        self.setLayout(layout)
+        self.setGeometry(QRect(100, 100, 400, 600))
 
 
 class Window(QMainWindow):
     def _get_on_click_callback(self):
         def callback():
             keyword_inputs, smiles = self._collect_data()
-            print(smiles)
-            print(keyword_inputs)
             predictions, metrics = self._callback(keyword_inputs, smiles)
-            print(predictions, metrics)
 
-            msg = QMessageBox()
-            msg.setWindowTitle("Success!")
-            lines = ["Predictions: {:.2f}, MAPE {:.2f}".format(predictions[target], metrics[target])
-                     for target in predictions]
-            msg.setText('\n'.join(["Predictions:"] + lines))
-            x = msg.exec_()
+            with tempfile.NamedTemporaryFile() as tmp:
+                fname = tmp.name
+                smiles_to_svg(smiles, fname)
+                self.popup = ResultPopUp(predictions, metrics, fname)
+                self.popup.show()
 
             self.update()
         return callback
@@ -56,6 +88,7 @@ class Window(QMainWindow):
         self.polymer_class_dropbox = QComboBox(self)
         self.polymer_class_dropbox.addItems(self._polymer_classes)
         self.polymer_class_dropbox.move(20 + 200, current_occupied_height)
+        self.polymer_class_dropbox.resize(self.polymer_class_dropbox.sizeHint())
         current_occupied_height += self.polymer_class_dropbox.height() + 20
 
         # Properties
