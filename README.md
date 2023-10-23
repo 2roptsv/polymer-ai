@@ -27,3 +27,5 @@ Main usage - as a desktop application. Run `python3 application.py`
 Default model is trained and evaluated with scripts:
 * train model: `python3 train.py`
 * evaluate model: `python3 predict.py`
+
+**NEW**: experimental NN model trained in PolyInfo dataset (see notebooks/polyinfo.ipynb)

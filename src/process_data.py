@@ -26,11 +26,19 @@ def handle_coupled_columns(row, c_left, c_right):
 
 
 class DefaultSmilesFeaturizer:
+    EMBEDDING_DIM = 300
+
     def __init__(self):
         self.featurizer = dc.feat.Mol2VecFingerprint()
 
     def __call__(self, smiles: str) -> np.ndarray:
-        return self.featurizer.featurize([smiles])[0]
+        features = self.featurizer.featurize([smiles])[0]
+        if not isinstance(features, np.ndarray) or \
+                features.shape[0] < DefaultSmilesFeaturizer.EMBEDDING_DIM:
+            features = np.empty(DefaultSmilesFeaturizer.EMBEDDING_DIM)
+            features[:] = np.nan
+        
+        return features         
 
 
 def process_data(

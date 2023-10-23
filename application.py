@@ -9,7 +9,7 @@ from PyQt5.QtGui import *
 from PyQt5.QtWidgets import *
 from PyQt5.QtSvg import *
 
-from src.model import ModelWrapper
+from src.model import BaseModelWrapper, ModelWrapper
 from src.defaults import DEFAULT_INPUTS, TRANSLATION, POLYMER_CLASS
 from src.draw import smiles_to_svg
 
@@ -151,7 +151,7 @@ class Window(QMainWindow):
 
 class Application:
     def _model_callback(self, input_kwargs: Dict, smiles: str):
-        return self._model(input_kwargs, smiles)
+        return self._model(smiles, input_kwargs)
 
     def __init__(self, model: ModelWrapper):
         self._model = model

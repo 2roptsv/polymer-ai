@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 from pathlib import Path
 from typing import Callable, Dict, List, Set, Tuple
+
+from tensorflow import keras
 from xgboost import XGBRegressor
 
 from src.defaults import TARGET_COLUMNS
@@ -13,7 +15,19 @@ TARGETS_KEY = "targets"
 METRICS_KEY = "metrics"
 
 
-class ModelWrapper:
+class ModelWrapperInterface:
+    def __init__(
+        self,
+        checkpoint_path: Path,
+        smiles_featurizer: Callable[[str], np.ndarray] = DefaultSmilesFeaturizer(),
+    ):
+        pass
+
+    def __call__(self, smiles: str, input_kwargs: Dict = {}) -> Tuple[Dict, Dict]:
+        pass
+
+
+class ModelWrapper(ModelWrapperInterface):
     @staticmethod
     def _model_path(checkpoint_path: Path):
         return checkpoint_path / (checkpoint_path.stem + ".txt")
@@ -66,7 +80,7 @@ class ModelWrapper:
         self._feature_names = json.load(ModelWrapper._feature_names_path(checkpoint_path).open('r'))
         self._targets_and_metrics = json.load(ModelWrapper._targets_path(checkpoint_path).open('r'))
 
-    def __call__(self, input_kwargs: Dict, smiles: str) -> Tuple[Dict, Dict]:
+    def __call__(self, smiles: str, input_kwargs: Dict = {}) -> Tuple[Dict, Dict]:
         model_names: Set[str] = set(self._feature_names)
         model_input = {}
         for key, value in input_kwargs.items():
@@ -92,6 +106,7 @@ class ModelWrapper:
         smiles = self._smiles_featurizer(smiles)
         if np.any(np.isnan(smiles)):
             print(f"Smiles featurizer failed to process {smiles}.")
+            return None
 
         model_input.update({str(k): v for k, v in enumerate(smiles)})
         assert set(model_input.keys()) == model_names
@@ -104,3 +119,41 @@ class ModelWrapper:
 
     def get_possible_category_values(self, column):
         return [item[0] for item in sorted(self._categories_mapping[column].items(), key=lambda x: x[1])]
+    
+
+class NNModelWrapper(ModelWrapperInterface):
+    METRICS_PATH = "metrics.json"
+
+    @staticmethod
+    def save_model(checkpoint_path: Path, metrics_per_target: Dict):
+        checkpoint_path.mkdir(parents=True, exist_ok=True)
+        for target, (model, _) in metrics_per_target.items():
+            path = checkpoint_path / (target + ".keras")
+            model.save(path)
+
+        target_to_metrics = {target: {k: float(v) for k, v in metrics.items()} for 
+                             target, (_, metrics) in metrics_per_target.items()}
+        path = checkpoint_path / NNModelWrapper.METRICS_PATH
+        json.dump(target_to_metrics, path.open('w'))
+
+    def __init__(
+        self,
+        checkpoint_path: Path,
+        smiles_featurizer: Callable[[str], np.ndarray] = DefaultSmilesFeaturizer(),
+    ):
+        self._smiles_featurizer = smiles_featurizer
+        self._target_to_model = {}
+        for target_path in checkpoint_path.glob("*.keras"):
+            self._target_to_model[target_path.stem] = keras.models.load_model(target_path)
+        self.target_to_metrics = json.load(
+            (checkpoint_path / NNModelWrapper.METRICS_PATH).open('r'))
+
+    def __call__(self, smiles: str, input_kwargs: Dict = {}) -> Tuple[Dict, Dict]:
+        smiles = np.expand_dims(self._smiles_featurizer(smiles), axis=0)
+        if np.any(np.isnan(smiles)):
+            print(f"Smiles featurizer failed to process {smiles}.")
+            return None
+        
+        outputs = {target: model.predict(smiles)[0]
+                   for target, model in self._target_to_model.items()}
+        return outputs, self.target_to_metrics
